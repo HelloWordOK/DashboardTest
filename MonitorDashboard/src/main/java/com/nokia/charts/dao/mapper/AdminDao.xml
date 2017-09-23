@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nokia.charts.dao.AdminDao">
+	<cache type="org.mybatis.caches.ehcache.LoggingEhcache" />
+	<resultMap type="com.nokia.charts.entity.admin.Domain" id="resultDomain">
+		<id column="id" property="id" />
+		<result column="domain_name" property="domainName" />
+	</resultMap>
+	
+	<resultMap type="com.nokia.charts.entity.admin.Bundle" id="resultBundle">
+		<id column="id" property="id" />
+		<result column="bundle_name" property="bundleName" />
+	</resultMap>
+	
+	<resultMap type="com.nokia.charts.entity.admin.ServiceEntity" id="resultService">
+		<id column="id" property="id" />
+		<result column="service_name" property="serviceName" />
+		<result column="service_code" property="serviceCode" />
+	</resultMap>
+	
+	<resultMap type="com.nokia.charts.entity.admin.Server" id="resultServer">
+		<id column="id" property="id" />
+		<result column="server_name" property="serverName" />
+		<result column="ip_address" property="ipAddress" />
+		<result column="server_details" property="serverDetails" />
+		<result column="service_id" property="serviceId" />
+	</resultMap>
+
+	<insert id="addDomain" parameterType="com.nokia.charts.entity.admin.Domain">
+		INSERT INTO 
+			db_domain
+			(domain_name)
+		VALUES
+			(#{domainName})
+	</insert>
+	
+	<insert id="addBundle" parameterType="com.nokia.charts.entity.admin.Bundle">
+		INSERT INTO 
+			db_bundle
+			(bundle_name)
+		VALUES
+			(#{bundleName})
+	</insert>
+	
+	<insert id="addService" parameterType="com.nokia.charts.entity.admin.ServiceEntity">
+		INSERT INTO 
+			db_service
+			(service_name,
+			 service_code)
+		VALUES
+			(#{serviceName},
+			#{serviceCode})
+	</insert>
+	
+	<insert id="addServer" parameterType="com.nokia.charts.entity.admin.Server">
+		INSERT INTO 
+			db_servers
+			(server_name,
+			 ip_address,
+			 server_details,
+			 service_id)
+		VALUES
+			(#{serverName},
+			#{ipAddress},
+			#{serverDetails},
+			#{serviceId})
+	</insert>
+	
+	<insert id="addGroup" parameterType="com.nokia.charts.entity.admin.Group">
+		INSERT INTO 
+			db_group
+			(group_name,
+			 service_code)
+		VALUES
+			(#{groupName},
+			#{serviceCode})
+	</insert>
+	
+	<insert id="addRelation" parameterType="com.nokia.charts.dto.admin.DomainBundleServiceDto">
+	     INSERT INTO
+	    	db_domain_bundle_service
+	    	(domain_id,bundle_id,service_id)
+	    VALUES
+    	    (#{domainId},#{bundleId},#{serviceId})
+	</insert>
+	
+	<insert id="addServerMonitor" parameterType="com.nokia.charts.dto.admin.ServerMonitorDto">
+	    INSERT INTO
+	    	server_monitor
+	    	(server_id,monitor_id)
+	    VALUES
+	    	(#{serverId},#{monitorId})
+	</insert>
+	
+	<select id="getDomainList" resultMap="resultDomain">
+	    SELECT
+	    	*
+	    FROM
+	    	db_domain
+	    ORDER BY
+	    	domain_name
+	</select>
+	
+	<select id="getBundleList" resultMap="resultBundle">
+	    SELECT
+	    	*
+	    FROM
+	    	db_bundle
+	    ORDER BY
+	    	bundle_name
+	</select>
+	
+	<select id="getServiceList" resultType="com.nokia.charts.entity.admin.ServiceEntity">
+	    SELECT
+			dso.id,
+			dso.service_name serviceName,
+			dso.service_code serviceCode
+		FROM
+			db_service dso
+		ORDER BY
+	    	dso.service_name
+	</select>
+	
+	<select id="getServerList" resultType="com.nokia.charts.entity.admin.Server">
+	    SELECT
+	    	dse.id,
+			dse.server_name serverName,
+			dse.ip_address ipAddress,
+			dse.server_details serverDetails,
+			dse.service_id serviceId,
+			dso.service_name serviceName,
+			dso.service_code serviceCode
+		FROM
+			db_servers dse
+		LEFT JOIN db_service dso ON dso.id = dse.service_id
+		ORDER BY
+	    	dse.server_name
+	</select>
+	
+	<select id="getGroupList" resultType="com.nokia.charts.entity.admin.Group">
+	    SELECT
+			dgo.id,
+			dgo.group_name groupName,
+			dgo.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_group dgo
+		LEFT JOIN db_service dso ON dso.service_code = dgo.service_code
+		ORDER BY
+			dgo.group_name
+	</select>
+	
+	<select id="getRelationList" resultType="com.nokia.charts.dto.admin.DomainBundleServiceDto">
+	    SELECT
+	    	dbs.id,
+			dbs.service_id serviceId,
+			dso.service_name serviceName,
+			dso.service_code serviceCode,
+			dbu.bundle_name bundleName,
+			ddo.domain_name domainName
+		FROM
+			db_domain_bundle_service dbs
+		LEFT JOIN db_service dso ON dso.id = dbs.service_id
+		LEFT JOIN db_bundle dbu ON dbu.id = dbs.bundle_id
+		LEFT JOIN db_domain ddo ON ddo.id = dbs.domain_id
+	</select>
+	
+	<select id="getMonitorList" resultType="com.nokia.charts.entity.Monitor">
+	    SELECT
+	    	id,
+	    	monitor_name monitorName,
+	    	description
+	    FROM
+	    	monitor
+	    ORDER BY
+	    	monitor_name
+	</select>
+	
+	<select id="getServerMonitorList" resultType="com.nokia.charts.dto.admin.ServerMonitorDto">
+	    SELECT
+			sm.id,
+			sm.server_id serverId,
+			sm.monitor_id monitorId,
+			dse.server_name serverName,
+			mo.monitor_name monitorName
+		FROM
+			server_monitor sm
+		LEFT JOIN db_servers dse ON dse.id = sm.server_id
+		LEFT JOIN monitor mo ON mo.id = sm.monitor_id
+	    	
+	</select>
+	
+	<select id="getDomainById" parameterType="int" resultMap="resultDomain">
+	    SELECT
+	    	*
+	    FROM
+	    	db_domain
+	    WHERE
+	    	id = #{id}
+	</select>
+	
+	<select id="getIsExistDomain" parameterType="string" resultType="int">
+	    SELECT
+	    	count(1)
+	    FROM
+	    	db_domain
+	    WHERE
+	    	domain_name = #{domainName}
+	</select>
+	
+	<select id="getBundleById" parameterType="int" resultMap="resultBundle">
+	    SELECT
+	    	*
+	    FROM
+	    	db_bundle
+	    WHERE
+	    	id = #{id}
+	</select>
+	
+	<select id="getIsExistBundle" parameterType="string" resultType="int">
+	    SELECT
+	    	count(1)
+	    FROM
+	    	db_bundle
+	    WHERE
+	    	bundle_name = #{bundleName}
+	</select>
+	
+	<select id="getServiceById" parameterType="int" resultMap="resultService">
+	    SELECT
+			*
+		FROM
+			db_service
+		WHERE
+			id = #{id}
+	</select>
+	
+	<select id="getIsExistService" parameterType="string" resultType="int">
+	    SELECT
+	    	count(1)
+	    FROM
+	    	db_service
+	    WHERE
+	    	service_code = #{serviceCode}
+	</select>
+	
+	<select id="getServerById" parameterType="int" resultType="com.nokia.charts.entity.admin.Server">
+	    SELECT
+	    	dse.id,
+			dse.server_name serverName,
+			dse.ip_address ipAddress,
+			dse.server_details serverDetails,
+			dse.service_id serviceId,
+			dso.service_name serviceName,
+			dso.service_code serviceCode
+		FROM
+			db_servers dse
+		LEFT JOIN db_service dso ON dso.id = dse.service_id
+		WHERE
+			dse.id = #{id}
+	</select>
+	
+	<select id="getGroupById" parameterType="int" resultType="com.nokia.charts.entity.admin.Group">
+	   SELECT
+	    	dgo.id,
+			dgo.group_name groupName,
+			dgo.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_group dgo
+		LEFT JOIN db_service dso ON dso.service_code = dgo.service_code
+		WHERE dgo.id = #{id}
+	</select>
+	
+	<select id="getRelationById" parameterType="int" resultType="com.nokia.charts.dto.admin.DomainBundleServiceDto">
+	    SELECT
+	    	dbs.id,
+	    	dbs.domain_id domainId,
+	    	dbs.bundle_id bundleId,
+	    	dbs.service_id serviceId
+	    FROM
+	    	db_domain_bundle_service dbs
+	    WHERE
+	    	dbs.id = #{id}
+	</select>
+	
+	<select id="getServerMonitorById" parameterType="int" resultType="com.nokia.charts.dto.admin.ServerMonitorDto">
+	    SELECT
+			sm.id,
+			sm.server_id serverId,
+			sm.monitor_id monitorId,
+			dse.server_name serverName,
+			mo.monitor_name monitorName
+		FROM
+			server_monitor sm
+		LEFT JOIN db_servers dse ON dse.id = sm.server_id
+		LEFT JOIN monitor mo ON mo.id = sm.monitor_id
+		WHERE
+			sm.id = #{id}
+	</select>
+	
+	<select id="getIsExistDomainBundleService" parameterType="com.nokia.charts.dto.admin.DomainBundleServiceDto" resultType="int">
+	    SELECT
+	    	count(1)
+	    FROM
+	    	db_domain_bundle_service dbs
+	    WHERE
+	    	<if test="domainId!=null and domainId!=''">
+	    	    dbs.domain_id = #{domainId} AND
+	    	</if>
+	    	<if test="bundleId!=null and bundleId!=''">
+	    	    dbs.bundle_id = #{bundleId} AND
+	    	</if>
+	    	<if test="serviceId!=null and serviceId!=''">
+	    	    dbs.service_id = #{serviceId}
+	    	</if>
+	</select>
+	
+	<select id="getIsExistServerMonitor" parameterType="com.nokia.charts.dto.admin.ServerMonitorDto" resultType="int">
+	    SELECT
+	    	count(1)
+	    FROM
+	    	server_monitor sm
+	    WHERE
+	    	<if test="serverId!=null and serverId!=''">
+	    	    sm.server_id = #{serverId} AND
+	    	</if>
+	    	<if test="monitorId!=null and monitorId!=''">
+	    	    sm.monitor_id = #{monitorId}
+	    	</if>
+	</select>
+	
+	<!-- delete -->
+	<delete id="deleteDomainById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_domain
+	    WHERE
+	    	id=#{domainId}
+	</delete>
+	
+	<delete id="deleteBundleById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_bundle
+	    WHERE
+	    	id=#{bundleId}
+	</delete>
+	
+	<delete id="deleteServiceById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_service
+	    WHERE
+	    	id=#{serviceId}
+	</delete>
+	
+	<delete id="deleteGroupById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_group
+	    WHERE
+	    	id=#{groupId}
+	</delete>
+	
+	<delete id="deleteServerById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_servers
+	    WHERE
+	    	id=#{serverId}
+	</delete>
+	
+	<delete id="deleteRelationById" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_domain_bundle_service
+	    WHERE
+	    	id=#{id}
+	</delete>
+	
+	<delete id="deleteRelationByDomainId" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_domain_bundle_service
+	    WHERE
+	    	domain_id=#{domainId}
+	</delete>
+	
+	<delete id="deleteRelationByBundleId" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_domain_bundle_service
+	    WHERE
+	    	bundle_id=#{bundleId}
+	</delete>
+	
+	<delete id="deleteRelationByServiceId" parameterType="int">
+	    DELETE
+	    FROM
+	    	db_domain_bundle_service
+	    WHERE
+	    	service_id=#{serviceId}
+	</delete>
+	
+	<delete id="deleteServerMonitorById" parameterType="int">
+	     DELETE
+	    FROM
+	    	server_monitor
+	    WHERE
+	    	id=#{id}
+	</delete>
+	
+	<update id="updateDomainById" parameterType="com.nokia.charts.entity.admin.Domain">
+	    UPDATE
+	    	db_domain
+	    SET
+	    	domain_name = #{domainName}
+	    WHERE
+	   		id = #{id}
+	</update>
+	
+	<update id="updateBundleById" parameterType="com.nokia.charts.entity.admin.Bundle">
+	    UPDATE
+	    	db_bundle
+	    SET
+	    	bundle_name = #{bundleName}
+	    WHERE
+	   		id = #{id}
+	</update>
+	<update id="updateServiceById" parameterType="com.nokia.charts.entity.admin.ServiceEntity">
+	    UPDATE
+	    	db_service
+	    SET
+	    	service_name = #{serviceName},
+	    	service_code = #{serviceCode}
+	    WHERE
+	   		id = #{id}
+	</update>
+	
+	<update id="updateGroupById" parameterType="com.nokia.charts.entity.admin.Group">
+	    UPDATE
+	    	db_group
+	    SET
+	    	group_name = #{groupName},
+	    	service_code = #{serviceCode}
+	    WHERE
+	   		id = #{id}
+	</update>
+	
+	<update id="updateServerById" parameterType="com.nokia.charts.entity.admin.Server">
+	    UPDATE
+	    	db_servers
+	    SET
+	    	server_name = #{serverName},
+	    	ip_address = #{ipAddress},
+	    	server_details = #{serverDetails},
+	    	service_id = #{serviceId}
+	    WHERE
+	   		id = #{id}
+	</update>
+
+	<update id="updateRelationById" parameterType="com.nokia.charts.dto.admin.DomainBundleServiceDto">
+	    UPDATE
+	    	db_domain_bundle_service
+	    SET
+	    	domain_id = #{domainId},
+	    	bundle_id = #{bundleId},
+	    	service_id = #{serviceId}
+	    WHERE
+	    	id = #{id}
+	</update>
+	
+	<update id="updateServerMonitorById" parameterType="com.nokia.charts.dto.admin.ServerMonitorDto">
+	    UPDATE
+	    	server_monitor
+	    SET
+	    	server_id = #{serverId},
+	    	monitor_id = #{monitorId}
+	    WHERE
+	    	id = #{id}
+	</update>
+</mapper> 

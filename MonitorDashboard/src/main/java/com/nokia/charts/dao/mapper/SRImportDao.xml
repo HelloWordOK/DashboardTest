@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nokia.charts.dao.SRImportDao">
+	<cache type="org.mybatis.caches.ehcache.LoggingEhcache"/>
+	<resultMap type="map" id="resultSR">
+		<id column="id" property="id" />
+		<result column="interaction_id" property="interaction_ID" />
+		<result column="status" property="status" />
+		<result column="submit_date" property="submit_Date" />
+		<result column="close_date" property="close_Date" />
+		<result column="number" property="number" />
+		<result column="assigned_dept" property="assigned_Dept" />
+		<result column="ms_service_provider" property="ms_Service_Provider" />
+		<result column="m_s_total_duration" property="m_S_Total_Duration" />
+		<result column="sla_breach" property="sla_Breach" />
+		<result column="assigned_to" property="assigned_to" />
+		<result column="real_breach" property="real_breach" />
+		<result column="comment" property="comment" />
+	</resultMap>
+	
+	<insert id="insertSRList" parameterType="java.util.List">
+	    INSERT INTO qa_sr
+	    	(interaction_id,
+	    	status,
+	    	submit_date,
+	    	close_date,
+	    	number,
+	    	assigned_dept,
+	    	ms_service_provider,
+	    	m_s_total_duration,
+	    	sla_breach,
+	    	assigned_to)
+	    VALUES
+	    	<foreach collection ="list" item="sr" index= "index" separator =",">
+	    		(#{sr.interaction_ID},
+		    	#{sr.status},
+		    	#{sr.submit_Date},
+		    	#{sr.close_Date},
+		    	#{sr.number},
+		    	#{sr.assigned_Dept},
+		    	#{sr.ms_Service_Provider},
+		    	#{sr.m_S_Total_Duration},
+		    	#{sr.sla_Breach},
+		    	#{sr.assigned_to}) 
+	    	</foreach>
+		    ON DUPLICATE KEY UPDATE
+		    	status = values(status),
+		    	submit_date = values(submit_date),
+		    	close_date = values(close_date),
+		    	assigned_dept = values(assigned_dept),
+		    	ms_service_provider = values(ms_service_provider),
+		    	m_s_total_duration = values(m_s_total_duration),
+		    	sla_breach = values(sla_breach),
+		    	assigned_to = values(assigned_to)
+	</insert>
+	
+	<select id="getSRAllMonthOrWeekCreatedList" parameterType="map" resultType="com.nokia.charts.dto.qa.SRResultDto">
+	    SELECT
+			submit_date,
+			close_date,
+			sla_breach,
+			assigned_to
+		FROM
+			qa_sr
+		WHERE
+			assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND submit_date >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND submit_date <= #{endMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+			<![CDATA[ AND submit_date >= #{startWeekDay} ]]>
+		</if>
+		<if test="endWeekDay!=null">
+		    <![CDATA[ AND submit_date <= #{endWeekDay} ]]>
+		</if>
+		<![CDATA[ AND submit_date <> "" ]]>
+	</select>
+	
+	<select id="getSRAllMonthOrWeekClosedList" parameterType="map" resultType="com.nokia.charts.dto.qa.SRResultDto">
+	   SELECT
+			submit_date,
+			close_date,
+			sla_breach,
+			assigned_to,
+			real_breach
+		FROM
+			qa_sr
+		WHERE
+			assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND close_date >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND close_date <= #{endMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+			<![CDATA[ AND close_date >= #{startWeekDay} ]]>
+		</if>
+		<if test="endWeekDay!=null">
+		    <![CDATA[ AND close_date <= #{endWeekDay} ]]>
+		</if>
+		<![CDATA[ AND close_date <> "" ]]>
+	</select>
+	
+	<select id="getOpendBacklogCount" parameterType="map" resultType="int">
+	   SELECT
+			count(1)
+		FROM
+			qa_sr
+		WHERE
+			assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+		<if test="startMonth!=null">
+			<![CDATA[ AND submit_date < #{startMonth}]]>
+		</if>
+		<if test="startWeekDay!=null">
+		    <![CDATA[ AND submit_date < #{startWeekDay} ]]>
+		</if>
+		<![CDATA[ AND submit_date <> "" ]]>
+	</select>
+	
+	<select id="getClosedBacklogCount" parameterType="map" resultType="int">
+	   SELECT
+			count(1)
+		FROM
+			qa_sr
+		WHERE
+			assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+		<if test="startMonth!=null">
+			<![CDATA[ AND close_date < #{startMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+		    <![CDATA[ AND close_date < #{startWeekDay} ]]>
+		</if>
+		<![CDATA[ AND close_date <> "" ]]>
+	</select>
+	
+	<!-- Get SR result and service code -->
+	<select id="getAllSRMonthlyList" parameterType="map" resultType="java.util.HashMap">
+	   SELECT
+	    	sr.interaction_id,
+	    	sr.status,
+	    	sr.submit_date,
+	    	sr.close_date,
+	    	sr.number,
+	    	sr.assigned_dept,
+	    	sr.ms_service_provider,
+	    	sr.m_s_total_duration,
+	    	sr.sla_breach,
+	    	sr.assigned_to,
+			s.service_code
+		FROM
+			qa_sr sr
+		LEFT JOIN db_group g ON sr.assigned_dept = g.group_name
+		LEFT JOIN db_service s ON g.service_code = s.service_code
+		WHERE
+			sr.assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null and endMonth!=null">
+			<![CDATA[ AND ((sr.submit_date >= #{startMonth} AND sr.submit_date <= #{endMonth})]]>
+			<![CDATA[ OR (sr.close_date >= #{startMonth} AND sr.close_date <= #{endMonth})]]>
+			<![CDATA[ OR (sr.submit_date >= #{startMonth} AND sr.close_date <= #{endMonth})]]>
+			<![CDATA[ OR (sr.submit_date < #{startMonth} AND sr.close_date = ''))]]>
+		</if>
+		<if test="startWeekDay!=null and endWeekDay!=null">
+			<![CDATA[ AND ((sr.submit_date >= #{startWeekDay} AND sr.submit_date <= #{endWeekDay})]]>
+			<![CDATA[ OR (sr.close_date >= #{startWeekDay} AND sr.close_date <= #{endWeekDay})]]>
+			<![CDATA[ OR (sr.submit_date >= #{startWeekDay} AND sr.close_date <= #{endWeekDay})]]>
+			<![CDATA[ OR (sr.submit_date < #{startWeekDay} AND sr.close_date = ''))]]>
+		</if>
+	</select>
+	
+	<select id="getSRServiceClosedList" parameterType="map" resultMap="resultSR">
+	   SELECT
+			*
+		FROM
+			qa_sr
+		WHERE
+			assigned_dept in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND close_date >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND close_date <= #{endMonth} ]]>
+		</if>
+		<if test="slaBreachList.size()!=0">
+		    AND (sla_breach in
+			<foreach item="sla" index="index" collection="slaBreachList"  open="(" separator="," close=")">  
+	           	#{sla}  
+	      	</foreach>
+			<if test="real_breach!=null||real_breach!=''">
+			    OR real_breach=#{real_breach}
+			</if>
+			)
+		</if>
+		<![CDATA[ AND close_date <> "" ]]>
+	</select>
+
+	<update id="updateSRRealBreach" parameterType="map">
+	    UPDATE qa_sr
+	    <set>
+	        <if test="real_breach != null">
+	    	    real_breach = #{real_breach},
+	    	</if>
+	    	<if test="comment !=null">
+	    	    comment = #{comment},
+	    	</if>
+	    </set>
+	    WHERE
+	    	  id = #{id}
+	</update>
+</mapper>

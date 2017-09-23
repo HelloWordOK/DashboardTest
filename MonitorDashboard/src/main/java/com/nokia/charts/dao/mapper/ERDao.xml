@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nokia.charts.dao.ERDao">
+
+    <cache type="org.mybatis.caches.ehcache.LoggingEhcache"/>
+	<resultMap type="com.nokia.charts.entity.EREntity" id="resultER">
+		<id column="id" property="id" />
+		<result column="bundle_id" property="bundleId" />
+		<result column="bundle_name" property="bundleName" />
+		<result column="release_sprint" property="releaseSprint" />
+		<result column="plan_velocity" property="planVelocity" />
+		<result column="actual_velocity" property="actualVelocity" />
+		<result column="plan_capacity" property="planCapacity" />
+		<result column="start_date" property="startDate" />
+		<result column="end_date" property="endDate" />
+		<result column="velocity_threshold" property="velocityThreshold" />
+		<result column="capacity_threshold" property="capacityThreshold" />
+		<result column="release_note" property="releaseNote" />
+	</resultMap>
+	
+	<select id="getSprintListByBundleId" parameterType="string" resultType="string">
+	    SELECT DISTINCT
+			dbe.release_sprint
+		FROM
+			db_er dbe
+		LEFT JOIN db_bundle dbu ON dbu.id = dbe.bundle_id
+		WHERE
+			dbe.bundle_id = #{bundleId}
+		ORDER BY
+			dbe.release_sprint
+	</select>
+	
+	<select id="getSumERData" parameterType="map" resultType="com.nokia.charts.dto.ERSumDto">
+	    SELECT
+	    	bundle_name bundleName,
+			SUM(plan_velocity) sumPlanVelocity,
+			SUM(plan_capacity) sumPlanCapacity,
+			SUM(actual_velocity) sumActualVelocity,
+			(SUM(actual_velocity)/SUM(plan_capacity))*100 sumProductivity,
+			(SUM(actual_velocity)/SUM(plan_velocity))*100 sumCompletionRate
+		FROM
+			db_er
+		WHERE
+			bundle_id = #{bundleId}
+		<![CDATA[ and release_sprint >= #{sprintStart} and release_sprint<=#{sprintEnd}]]>
+		ORDER BY
+			release_sprint;
+	</select>
+	
+	<select id="getSumERStartDate" parameterType="map" resultType="string">
+	    SELECT
+			start_date
+		FROM
+			db_er
+		WHERE
+			bundle_id = #{bundleId}
+		AND release_sprint = #{sprintStart};
+	    
+	</select>
+	
+	<select id="getSumEREndDate" parameterType="map" resultType="string">
+	    SELECT
+			end_date
+		FROM
+			db_er
+		WHERE
+			bundle_id = #{bundleId}
+		AND release_sprint = #{sprintEnd};
+	    
+	</select>
+	
+	<select id="getBeforeTenData" parameterType="map" resultType="com.nokia.charts.dto.ERDto">
+	    SELECT
+			release_sprint releaseSprint,
+	    	plan_velocity planVelocity,
+	    	plan_capacity planCapacity,
+	    	actual_velocity actualVelocity,
+	    	velocity_threshold velocityThreshold,
+	    	capacity_threshold capacityThreshold,
+			(actual_velocity/plan_capacity)*100 productivity,
+			(actual_velocity/plan_velocity)*100 completionRate,
+			release_note releaseNote
+		FROM
+			(
+				SELECT
+					*
+				FROM
+					db_er
+				WHERE
+					bundle_id = #{bundleId} 
+					<![CDATA[ and release_sprint <= #{sprintEnd} ]]>
+				ORDER BY
+					release_sprint DESC
+				LIMIT 10
+			) er
+		ORDER BY
+			release_sprint;
+	</select>
+	
+	<select id="getExportERData" parameterType="map" resultType="com.nokia.charts.dto.ExportERDto">
+	    SELECT
+			bundle_name bundleName,
+			release_sprint releaseSprint,
+			plan_velocity planVelocity,
+			plan_capacity planCapacity,
+			actual_velocity actualVelocity,
+			(actual_velocity/plan_capacity)*100 productivity,
+			(actual_velocity/plan_velocity)*100 completionRate,
+			start_date startDate,
+			end_date endDate,
+			release_note releaseNote
+		FROM
+			db_er
+		WHERE
+			bundle_id = #{bundleId}
+		<![CDATA[ AND release_sprint >= #{sprintStart}
+				  AND release_sprint <= #{sprintEnd}]]>
+		ORDER BY
+			release_sprint
+	</select>
+
+	<!-- Check release sprint whether exists -->
+	<select id="checkReleaseSprint" parameterType="com.nokia.charts.entity.EREntity" resultType="java.lang.Integer">
+		SELECT
+			COUNT(*)
+		FROM
+			db_er e
+		WHERE
+			e.bundle_id = #{bundleId} AND
+			e.release_sprint = #{releaseSprint};
+	</select>
+	
+	<!-- Insert submit data to statistics_er -->
+	<insert id="insertSubmitData" parameterType="com.nokia.charts.entity.EREntity">
+		INSERT INTO db_er (
+			bundle_id,
+			bundle_name,
+			release_sprint,
+			plan_velocity,
+			actual_velocity,
+			plan_capacity,
+			start_date,
+			end_date,
+			velocity_threshold,
+			capacity_threshold,
+			release_note
+		)
+		VALUES
+			(
+				#{bundleId},
+				#{bundleName},
+				#{releaseSprint},
+				#{planVelocity},
+				#{actualVelocity},
+				#{planCapacity},
+				#{startDate},
+				#{endDate},
+				0,
+				0,
+				#{releaseNote}
+			);
+	</insert>
+	
+	<select id="getBundleListToSearch" resultType="com.nokia.charts.entity.admin.Bundle">
+	    SELECT DISTINCT
+			dbe.bundle_id id,
+			dbe.bundle_name bundleName
+		FROM
+			db_er dbe
+		LEFT JOIN db_bundle dbu ON dbu.id = dbe.bundle_id
+		ORDER BY
+			dbe.bundle_name
+	</select>
+
+	<select id="getBundleListToInsert" resultType="com.nokia.charts.entity.admin.Bundle">
+	    SELECT
+			dbu.id,
+			dbu.bundle_name bundleName
+		FROM
+			db_bundle dbu
+		ORDER BY
+			dbu.bundle_name
+	</select>
+	<!-- Update submit data to statistics_er -->
+	<update id="updateSubmitData" parameterType="com.nokia.charts.entity.EREntity">
+		UPDATE db_er e
+		SET e.bundle_id = #{bundleId},
+		 e.bundle_name = #{bundleName},
+		 e.release_sprint = #{releaseSprint},
+		 e.plan_velocity = #{planVelocity},
+		 e.actual_velocity = #{actualVelocity},
+		 e.plan_capacity = #{planCapacity},
+		 e.start_date = #{startDate},
+		 e.end_date = #{endDate},
+		 e.release_note = #{releaseNote}
+		WHERE
+			e.release_sprint = #{releaseSprint};
+	</update>
+</mapper>

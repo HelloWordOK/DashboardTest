@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.nokia.charts.dao.IncidentImportDao">
+	<cache type="org.mybatis.caches.ehcache.LoggingEhcache"/>
+	<resultMap type="map" id="resultIncident">
+		<id column="id" property="id" />
+		<result column="incident_id" property="incident_ID" />
+		<result column="interaction_id" property="interaction_ID" />
+		<result column="status" property="status" />
+		<result column="priority" property="priority" />
+		<result column="logical_name" property="logical_Name" />
+		<result column="affected_item" property="affected_Item" />
+		<result column="assignment" property="assignment" />
+		<result column="service_provider" property="service_Provider" />
+		<result column="first_touch" property="first_Touch" />
+		<result column="open_time" property="open_Time" />
+		<result column="resolved_time" property="resolved_Time" />
+		<result column="close_time" property="close_Time" />
+		<result column="current_elapsed_time" property="current_Elapsed_Time" />
+		<result column="ms_ttr_breach" property="ms_Ttr_Breach" />
+		<result column="reopen_time" property="reopen_Time" />
+		<result column="tto" property="tTO" />
+		<result column="ttr" property="tTR" />
+		<result column="reassignment_count" property="reassignment_Count" />
+		<result column="resolution_code" property="resolution_Code" />
+		<result column="ms_breach_reason" property="ms_Breach_Reason" />
+		<result column="assignee" property="assignee" />
+		<result column="real_breach" property="real_breach" />
+		<result column="comment" property="comment" />
+	</resultMap>
+	
+	<sql id="domain_group_list">
+	    SELECT
+	    	ddg.id groupId,
+			ddg.group_name groupName,
+			ddo.id domainId,
+			ddo.domain_name domainName,
+			dso.id serviceId,
+			dso.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_domain_bundle_service dbs
+		LEFT JOIN db_service dso ON dso.id = dbs.service_id
+		LEFT JOIN db_domain ddo ON ddo.id = dbs.domain_id
+		LEFT JOIN db_group ddg ON ddg.service_code = dso.service_code 
+	</sql>
+	
+	<insert id="insertIncidentList" parameterType="java.util.List">
+	    INSERT INTO qa_incident 
+	    	(incident_id,
+	    	interaction_id,
+	    	status,
+	    	priority,
+	    	logical_name,
+	    	affected_item,
+	    	assignment,
+	    	service_provider,
+	    	first_touch,
+	    	open_time,
+	    	resolved_time,
+	    	close_time,
+	    	current_elapsed_time,
+	    	ms_ttr_breach,
+	    	reopen_time,
+	    	tto,
+	    	ttr,
+	    	reassignment_count,
+	    	resolution_code,
+	    	ms_breach_reason,
+	    	assignee)
+	    VALUES
+	    	<foreach collection ="list" item="incident" index= "index" separator =",">
+	    	    (#{incident.incident_ID},
+		    	#{incident.interaction_ID},
+		    	#{incident.status},
+		    	#{incident.priority},
+		    	#{incident.logical_Name},
+		    	#{incident.affected_Item},
+		    	#{incident.assignment},
+		    	#{incident.service_Provider},
+		    	#{incident.first_Touch},
+		    	#{incident.open_Time},
+		    	#{incident.resolved_Time},
+		    	#{incident.close_Time},
+		    	#{incident.current_Elapsed_Time},
+		    	#{incident.ms_Ttr_Breach},
+		    	#{incident.reopen_Time},
+		    	#{incident.tTO},
+		    	#{incident.tTR},
+		    	#{incident.reassignment_Count},
+		    	#{incident.resolution_Code},
+		    	#{incident.ms_Breach_Reason},
+		    	#{incident.assignee}) 
+	    	</foreach>
+	    	ON DUPLICATE KEY UPDATE
+		    	status = values(status),
+		    	priority = values(priority),
+		    	logical_name = values(logical_name),
+		    	affected_item = values(affected_item),
+		    	assignment = values(assignment),
+		    	service_provider = values(service_provider),
+		    	first_touch = values(first_touch),
+		    	open_time = values(open_time),
+		    	resolved_time = values(resolved_time),
+		    	close_time = values(close_time),
+		    	current_elapsed_time = values(current_elapsed_time),
+		    	ms_ttr_breach = values(ms_ttr_breach),
+		    	reopen_time = values(reopen_time),
+		    	tto = values(tto),
+		    	ttr = values(ttr),
+		    	reassignment_count = values(reassignment_count),
+		    	resolution_code = values(resolution_code),
+		    	ms_breach_reason = values(ms_breach_reason),
+		    	assignee = values(assignee)
+	</insert>
+	
+	<select id="getQAServiceList" resultType="com.nokia.charts.entity.admin.ServiceEntity">
+	    SELECT DISTINCT
+			dso.id,
+			dso.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_domain_bundle_service dbs
+		LEFT JOIN db_service dso ON dso.id = dbs.service_id
+		LEFT JOIN db_group dgp ON dgp.service_code = dso.service_code
+		WHERE
+			dbs.service_id != ''
+		ORDER BY
+			dso.service_name
+	</select>
+	
+	<select id="getServiceListToMajor" resultType="com.nokia.charts.entity.admin.ServiceEntity">
+	    SELECT
+			dso.id,
+			dso.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_service dso
+		ORDER BY
+			dso.service_name
+	</select>
+	
+	<select id="getQADomainList" resultType="com.nokia.charts.entity.admin.Domain">
+	    SELECT DISTINCT
+			ddo.id,
+			ddo.domain_name domainName
+		FROM
+			db_domain_bundle_service dbs
+		LEFT JOIN db_domain ddo ON ddo.id = dbs.domain_id
+		WHERE
+			dbs.domain_id != ''
+		ORDER BY
+			ddo.domain_name
+	</select>
+	
+	<select id="getQAServiceByCode" parameterType="string" resultType="com.nokia.charts.entity.admin.ServiceEntity">
+	    SELECT
+			dso.id,
+			dso.service_code serviceCode,
+			dso.service_name serviceName
+		FROM
+			db_service dso
+		WHERE
+			dso.service_code = #{serviceCode}
+	</select>
+	
+	<select id="getQADomainById" parameterType="string" resultType="com.nokia.charts.entity.admin.Domain">
+	    SELECT
+			ddo.id,
+			ddo.domain_name domainName
+		FROM
+			db_domain ddo
+		WHERE
+			ddo.id = #{domainId}
+	</select>
+	
+	<select id="getQAGroupNameByDomain" parameterType="string" resultType="string">
+		SELECT 
+			dg.groupName 
+		FROM 
+			(<include refid="domain_group_list"/>) dg 
+		WHERE
+			dg.domainId = #{domainId}
+	</select>
+	
+	<select id="getQAGroupNameByServiceCode" parameterType="string" resultType="string">
+	    SELECT
+			dgp.group_name
+		FROM
+			db_group dgp
+		WHERE
+			dgp.service_code = #{serviceCode}
+	</select>
+	
+	<select id="getIncidentAllMonthOrWeekCreatedList" parameterType="map" resultType="com.nokia.charts.dto.qa.IncidentResultDto">
+	   SELECT
+			open_time,
+			close_time,
+			priority,
+			ms_ttr_breach,
+			status
+		FROM
+			qa_incident
+		WHERE
+			assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND open_time >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND open_time <= #{endMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+			<![CDATA[ AND open_time >= #{startWeekDay} ]]>
+		</if>
+		<if test="endWeekDay!=null">
+		    <![CDATA[ AND open_time <= #{endWeekDay} ]]>
+		</if>
+		<![CDATA[ AND open_time <> "" ]]>
+	</select>
+	
+	<select id="getIncidentAllMonthOrWeekClosedList" parameterType="map" resultType="com.nokia.charts.dto.qa.IncidentResultDto">
+	   SELECT
+			open_time,
+			close_time,
+			priority,
+			ms_ttr_breach,
+			status,
+			real_breach
+		FROM
+			qa_incident
+		WHERE
+			assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND close_time >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND close_time <= #{endMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+			<![CDATA[ AND close_time >= #{startWeekDay} ]]>
+		</if>
+		<if test="endWeekDay!=null">
+		    <![CDATA[ AND close_time <= #{endWeekDay} ]]>
+		</if>
+		<![CDATA[ AND close_time <> "" ]]>
+	</select>
+	
+	<select id="getOpendBacklogCount" parameterType="map" resultType="int">
+	   SELECT
+			count(1)
+		FROM
+			qa_incident
+		WHERE
+			assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+		<if test="startMonth!=null">
+			<![CDATA[ AND open_time < #{startMonth}]]>
+		</if>
+		<if test="startWeekDay!=null">
+		    <![CDATA[ AND open_time < #{startWeekDay} ]]>
+		</if>
+		<![CDATA[ AND open_time <> "" ]]>
+	</select>
+	
+	<select id="getClosedBacklogCount" parameterType="map" resultType="int">
+	   SELECT
+			count(1)
+		FROM
+			qa_incident
+		WHERE
+			assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+		<if test="startMonth!=null">
+			<![CDATA[ AND close_time < #{startMonth} ]]>
+		</if>
+		<if test="startWeekDay!=null">
+		    <![CDATA[ AND close_time < #{startWeekDay} ]]>
+		</if>
+		<![CDATA[ AND close_time <> "" ]]>
+	</select>
+	
+	<!-- Get incident result and service code -->
+	<select id="getAllIncidentMonthlyList" parameterType="map" resultType="java.util.HashMap">
+	   SELECT
+			i.incident_id,
+	    	i.interaction_id,
+	    	i.status,
+	    	i.priority,
+	    	i.logical_name,
+	    	i.affected_item,
+	    	i.assignment,
+	    	i.service_provider,
+	    	i.first_touch,
+	    	i.open_time,
+	    	i.resolved_time,
+	    	i.close_time,
+	    	i.current_elapsed_time,
+	    	i.ms_ttr_breach,
+	    	i.reopen_time,
+	    	i.tto,
+	    	i.ttr,
+	    	i.reassignment_count,
+	    	i.resolution_code,
+	    	i.ms_breach_reason,
+	    	i.assignee,
+			s.service_code
+		FROM
+			qa_incident i
+		LEFT JOIN db_group g ON i.assignment = g.group_name
+		LEFT JOIN db_service s ON g.service_code = s.service_code
+		WHERE
+			i.assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null and endMonth!=null">
+			<![CDATA[ AND ((i.open_time >= #{startMonth} AND i.open_time <= #{endMonth})]]>
+			<![CDATA[ OR (i.close_time >= #{startMonth} AND i.close_time <= #{endMonth})]]>
+			<![CDATA[ OR (i.open_time >= #{startMonth} AND i.close_time <= #{endMonth})]]>
+			<![CDATA[ OR (i.open_time < #{startMonth} AND i.close_time = ''))]]>
+		</if>
+		<if test="startWeekDay!=null and endWeekDay!=null">
+			<![CDATA[ AND ((i.open_time >= #{startWeekDay} AND i.open_time <= #{endWeekDay})]]>
+			<![CDATA[ OR (i.close_time >= #{startWeekDay} AND i.close_time <= #{endWeekDay})]]>
+			<![CDATA[ OR (i.open_time >= #{startWeekDay} AND i.close_time <= #{endWeekDay})]]>
+			<![CDATA[ OR (i.open_time >= #{startWeekDay} AND i.close_time <= ''))]]>
+		</if>
+	</select>
+	
+	<select id="getIncidentServiceClosedList" parameterType="map" resultMap="resultIncident">
+	   SELECT
+			*
+		FROM
+			qa_incident
+		WHERE
+			assignment in
+			<foreach item="group" index="index" collection="groupList"  open="(" separator="," close=")">  
+           		#{group}  
+      		</foreach>
+	    <if test="startMonth!=null">
+			<![CDATA[ AND close_time >= #{startMonth} ]]>
+		</if>
+		<if test="endMonth!=null">
+		    <![CDATA[ AND close_time < #{endMonth} ]]>
+		</if>
+		<if test="slaBreachList.size()!=0">
+		    AND (ms_ttr_breach in
+			<foreach item="sla" index="index" collection="slaBreachList"  open="(" separator="," close=")">  
+	           	#{sla}
+	      	</foreach>
+			<if test="real_breach!=null||real_breach!=''">
+			    OR real_breach=#{real_breach}
+			</if>)
+		</if>
+		<![CDATA[ AND close_time <> "" ]]>
+	</select>
+
+	<update id="updateIncidentRealBreach" parameterType="map">
+	    UPDATE qa_incident
+	    <set>
+	        <if test="real_breach != null">
+	    	    real_breach = #{real_breach},
+	    	</if>
+	    	<if test="comment !=null">
+	    	    comment = #{comment},
+	    	</if>
+	    </set>
+	    WHERE
+	    	  id = #{id}
+	</update>
+</mapper>
